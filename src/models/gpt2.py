@@ -40,7 +40,7 @@ class MultiHeadAttention(nn.Module):
     Returns:
       [B, N, H]
     """
-    b, n, d_in = x.shape
+    b, n, _ = x.shape
 
     k = self.wk(x) # [B, N, H]
     q = self.wq(x) # [B, N, H]
