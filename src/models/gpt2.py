@@ -1,23 +1,14 @@
 import torch
 import torch.nn as nn
-# from models.layer_norm import LayerNorm
-# from src.models.layer_norm import LayerNorm
-# import gelu
-from . import gelu
-
-from src.models.gelu import GELU
-
-# from . import gelu
-# from gelu import GELU
-
-# from models import gelu
+from src.models import gelu
+from src.models import layer_norm
 
 class FeedForward(nn.Module):
   def __init__(self, config):
     super().__init__()
     self.layers = nn.Sequential(
         nn.Linear(config["emb_dim"], config["emb_dim"] * 4),
-        GELU(),
+        gelu.GELU(),
         nn.Linear(config["emb_dim"] * 4, config["emb_dim"]),
     )
 
@@ -77,3 +68,59 @@ class MultiHeadAttention(nn.Module):
     res = self.out_proj(res)  # [B, N, H]
 
     return res
+
+class TransformerBlock(nn.Module):
+
+  def __init__(self, config):
+    super().__init__()
+
+    self.norm1 = layer_norm.LayerNorm(config["emb_dim"])
+    self.norm2 = layer_norm.LayerNorm(config["emb_dim"])
+    self.mha = MultiHeadAttention(
+        d_in=config["emb_dim"],
+        d_out=config["emb_dim"],
+        context_length=config['context_length'],
+        num_heads=config["n_heads"],
+        dropout=config["drop_rate"],
+        qkv_bias=config["qkv_bias"]
+    )
+    self.ffn = FeedForward(config)
+    self.dropout = nn.Dropout(config['drop_rate'])
+
+  def forward(self, x):
+    shortcut = x
+    y = self.norm1(x)
+    y = self.mha(y)
+    # TODO: is this needed since the MHA already has the dropout internally.
+    y = self.dropout(y)
+    x = y + shortcut
+
+    shortcut = x
+    y = self.norm2(x)
+    y = self.ffn(y)
+    y = self.dropout(y)
+    y = y + shortcut
+
+    return y
+  
+class GPTModel(nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.config = config
+    self.tok_emb = nn.Embedding(config["vocab_size"], config["emb_dim"])
+    self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
+    self.drop = nn.Dropout(config["drop_rate"])
+    self.trf_blocks = nn.Sequential(*[TransformerBlock(config) for _ in range(config["n_layers"])])
+    self.final_norm = layer_norm.LayerNorm(config["emb_dim"])
+    self.out_head = nn.Linear(config["emb_dim"], config["vocab_size"], bias=False)
+
+  def forward(self, x):
+    bs, seq_len = x.shape
+    tok_emb = self.tok_emb(x)
+    pos_emb = self.pos_emb(torch.arange(seq_len, device=x.device))
+    x = tok_emb + pos_emb
+    x = self.drop(x)
+    x = self.trf_blocks(x)
+    x = self.final_norm(x)
+    logits = self.out_head(x)
+    return logits

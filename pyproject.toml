@@ -1,0 +1,15 @@
+[project]
+name = "zhi-llm"
+version = "0.2"
+description = "zhi's llm"
+readme = "README.md"
+authors = [{ name = "Zhi Li" }]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]

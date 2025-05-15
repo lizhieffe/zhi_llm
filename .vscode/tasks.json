@@ -5,7 +5,7 @@
       "label": "Run Hello World",
       "type": "shell",
       "command": "python3",
-      "args": ["hello_world.py"],
+      "args": ["src/models/gpt2.py"],
       "group": {
         "kind": "build",
         "isDefault": true
