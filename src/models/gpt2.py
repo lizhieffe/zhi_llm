@@ -1,7 +1,11 @@
+import typing
+
 import torch
 import torch.nn as nn
 from src.models import gelu
 from src.models import layer_norm
+
+PosEncodingType = typing.Literal["none", "abs", "sinusoidal"]
 
 class FeedForward(nn.Module):
   def __init__(self, config):
@@ -103,19 +107,51 @@ class TransformerBlock(nn.Module):
 
     return y
   
+def populate_sinusoidal_pos_emb(context_length: int, hidden_dim: int) -> torch.Tensor:
+  """Populate the sinusoidal positional embedding.
+
+  Args:
+    context_length: The context length.
+    hidden_dim: The hidden dimension.
+
+  Returns:
+    The sinusoidal positional embedding. Shape: [context_length, hidden_dim].
+  """
+  pos = torch.arange(0, context_length, dtype=torch.float)  # [N]
+
+  odd = torch.sin(pos.unsqueeze(-1) / torch.pow(10000, 2 * torch.arange(0, hidden_dim, 2, dtype=torch.float) / hidden_dim))   # [N, HIDDEN/2]
+  even = torch.cos(pos.unsqueeze(-1) / torch.pow(10000, 2 * torch.arange(1, hidden_dim, 2, dtype=torch.float) / hidden_dim))  # [N, HIDDEN/2]
+  
+  # Interleave
+  ret = torch.stack((odd, even)).view(2, -1).t().contiguous().view(context_length, -1)    # [N, HIDDEN]
+  assert ret.shape == (context_length, hidden_dim)
+
+  return ret
+
 class GPTModel(nn.Module):
   def __init__(self, config):
     super().__init__()
     self.config = config
     self.tok_emb = nn.Embedding(config["vocab_size"], config["emb_dim"])
     
-    self.pos_emb_type = config["pos_emb_type"]
+    pos_emb_type = config["pos_emb_type"]
+    self.pos_emb_type = pos_emb_type
+    if pos_emb_type not in typing.get_args(PosEncodingType):
+      raise ValueError(f"Unknown name: {pos_emb_type}")
+
     self.pos_emb = None
-    if self.pos_emb_type:
-      self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
-      print("Pos embedding is enabled!")
-    else:
+    # self.pos_emb_val = None
+    if pos_emb_type == "none":
       print("Pos embedding is disabled!")
+    elif pos_emb_type == "abs":
+      self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
+      print("Positional encoding type: absolute")
+    elif pos_emb_type == "sinusoidal":
+      # self.pos_emb_val = populate_sinusoidal_pos_emb(config['context_length'], config["emb_dim"])
+      self.register_buffer('pos_emb_val', populate_sinusoidal_pos_emb(config['context_length'], config["emb_dim"]))
+      print("Positional encoding type: sinusoidal")
+    else:
+      raise ValueError(f"Unknown name: {pos_emb_type}")
 
     self.drop = nn.Dropout(config["drop_rate"])
     self.trf_blocks = nn.Sequential(*[TransformerBlock(config) for _ in range(config["n_layers"])])
@@ -127,6 +163,9 @@ class GPTModel(nn.Module):
 
     if self.pos_emb:
       x = self.tok_emb(x) + self.pos_emb(x)
+    elif self.pos_emb_val is not None:
+      pos_emb_val = self.pos_emb_val[:seq_len]
+      x = self.tok_emb(x) + pos_emb_val
     else:
       x = self.tok_emb(x)
 
