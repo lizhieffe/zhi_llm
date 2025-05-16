@@ -108,7 +108,15 @@ class GPTModel(nn.Module):
     super().__init__()
     self.config = config
     self.tok_emb = nn.Embedding(config["vocab_size"], config["emb_dim"])
-    self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
+    
+    self.pos_emb_type = config["pos_emb_type"]
+    self.pos_emb = None
+    if self.pos_emb_type:
+      self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
+      print("Pos embedding is enabled!")
+    else:
+      print("Pos embedding is disabled!")
+
     self.drop = nn.Dropout(config["drop_rate"])
     self.trf_blocks = nn.Sequential(*[TransformerBlock(config) for _ in range(config["n_layers"])])
     self.final_norm = layer_norm.LayerNorm(config["emb_dim"])
@@ -117,8 +125,14 @@ class GPTModel(nn.Module):
   def forward(self, x):
     bs, seq_len = x.shape
     tok_emb = self.tok_emb(x)
-    pos_emb = self.pos_emb(torch.arange(seq_len, device=x.device))
-    x = tok_emb + pos_emb
+
+    x = self.tok_emb
+    if self.pos_emb:
+      x += self.pos_emb
+
+    assert False
+    assert not self.pos_emb_type
+
     x = self.drop(x)
     x = self.trf_blocks(x)
     x = self.final_norm(x)
