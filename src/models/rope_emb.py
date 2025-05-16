@@ -29,16 +29,21 @@ def _get_thetas(hidden_dim: int) -> torch.Tensor:
   thetas = thetas.contiguous().view(-1)         # [HID_DIM]
   return thetas
 
-def rope(x: torch.Tensor) -> torch.Tensor:
-  _, n, hid_dim = x.shape                                             # [B, N, HID_DIM]
-  
-  thetas = _get_thetas(hidden_dim=hid_dim)                            # [HID_DIM]
-  thetas = thetas.unsqueeze(0)                                        # [1, HID_DIM]
-  thetas = thetas.repeat((n, 1))                                      # [N, HID_DIM]
-  thetas = thetas.t()                                                 # [HID_DIM, N]
-  pos = torch.arange(0, n)                                            # [N]
-  thetas = pos * thetas
-  thetas = thetas.t()                                                 # [N, HID_DIM]
+class RopePosEmb(torch.nn.Module):
+  def __init__(self, hidden_dim: int):
+    super().__init__()
+    self.thetas = _get_thetas(hidden_dim)                               # [HID_DIM]
 
-  ret = x * torch.cos(thetas) + _transform_x(x) * torch.sin(thetas)   # [B, N, HID_DIM]
-  return ret
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+    _, n, _ = x.shape                                            # [B, N, HID_DIM]
+    
+    thetas = self.thetas                                                # [HID_DIM]
+    thetas = thetas.unsqueeze(0)                                        # [1, HID_DIM]
+    thetas = thetas.repeat((n, 1))                                      # [N, HID_DIM]
+    thetas = thetas.t()                                                 # [HID_DIM, N]
+    pos = torch.arange(0, n)                                            # [N]
+    thetas = pos * thetas
+    thetas = thetas.t()                                                 # [N, HID_DIM]
+
+    ret = x * torch.cos(thetas) + _transform_x(x) * torch.sin(thetas)   # [B, N, HID_DIM]
+    return ret

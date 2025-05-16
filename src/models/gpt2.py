@@ -4,8 +4,9 @@ import torch
 import torch.nn as nn
 from src.models import gelu
 from src.models import layer_norm
+from src.models import rope_emb
 
-PosEncodingType = typing.Literal["none", "abs", "sinusoidal"]
+PosEncodingType = typing.Literal["none", "abs", "sinusoidal", "rope"]
 
 class FeedForward(nn.Module):
   def __init__(self, config):
@@ -146,8 +147,10 @@ class GPTModel(nn.Module):
     elif pos_emb_type == "abs":
       self.pos_emb = nn.Embedding(config["context_length"], config["emb_dim"])
       print("Positional encoding type: absolute")
+    elif pos_emb_type == "rope":
+      self.pos_emb = rope_emb.RopePosEmb(hidden_dim=config["emb_dim"])
+      print("Positional encoding type: rope")
     elif pos_emb_type == "sinusoidal":
-      # self.pos_emb_val = populate_sinusoidal_pos_emb(config['context_length'], config["emb_dim"])
       self.register_buffer('pos_emb_val', populate_sinusoidal_pos_emb(config['context_length'], config["emb_dim"]))
       print("Positional encoding type: sinusoidal")
     else:

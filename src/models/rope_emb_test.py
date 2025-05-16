@@ -39,5 +39,6 @@ def test_rope():
     x = torch.arange(0, 64, dtype=torch.float)
     x = x.view(2, 4, 8)     # [B, N, HID_DIM]
 
-    res = rope_emb.rope(x)
+    rope = rope_emb.RopePosEmb(hidden_dim=8)
+    res = rope(x)
     assert(res.shape, (2, 4, 8))
