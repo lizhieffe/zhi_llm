@@ -9,3 +9,9 @@ pip install -r requirements.txt
 # Run Test
 
 pytest
+
+# References
+
+## Setup a new project
+- https://ismailtlemcani.com/blog/python-tip-3-python-packages-easily
+- https://til.simonwillison.net/python/pyproject

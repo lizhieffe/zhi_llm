@@ -124,14 +124,11 @@ class GPTModel(nn.Module):
 
   def forward(self, x):
     bs, seq_len = x.shape
-    tok_emb = self.tok_emb(x)
 
-    x = self.tok_emb
     if self.pos_emb:
-      x += self.pos_emb
-
-    assert False
-    assert not self.pos_emb_type
+      x = self.tok_emb(x) + self.pos_emb(x)
+    else:
+      x = self.tok_emb(x)
 
     x = self.drop(x)
     x = self.trf_blocks(x)
