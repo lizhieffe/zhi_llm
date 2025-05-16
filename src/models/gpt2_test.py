@@ -12,6 +12,7 @@ def test_always_passes():
         "drop_rate": 0.1,
         "n_layers": 12,
         "n_heads": 12,
+        "pos_emb_type": "sinusoidal",
     }
     
     model = gpt2.GPTModel(config)
