@@ -161,7 +161,7 @@ class GPTModel(nn.Module):
       raise ValueError(f"Unknown name: {pos_emb_type}")
 
     self.pos_emb = None
-    # self.pos_emb_val = None
+    self.pos_emb_val = None
     if pos_emb_type == "none":
       print("Pos embedding is disabled!")
     elif pos_emb_type == "abs":
@@ -190,7 +190,7 @@ class GPTModel(nn.Module):
 
     if self.pos_emb and self.pos_emb_type == "abs":
       x = self.tok_emb(x) + self.pos_emb(x)
-    elif self.pos_emb_val is not None:
+    elif hasattr(self, 'pos_emb_val') and self.pos_emb_val is not None:
       pos_emb_val = self.pos_emb_val[:seq_len]
       x = self.tok_emb(x) + pos_emb_val
     else:
