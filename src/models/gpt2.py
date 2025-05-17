@@ -161,7 +161,7 @@ class GPTModel(nn.Module):
       raise ValueError(f"Unknown name: {pos_emb_type}")
 
     self.pos_emb = None
-    self.pos_emb_val = None
+    # self.pos_emb_val = None
     if pos_emb_type == "none":
       print("Pos embedding is disabled!")
     elif pos_emb_type == "abs":

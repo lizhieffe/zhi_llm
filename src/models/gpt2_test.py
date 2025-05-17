@@ -34,7 +34,7 @@ def test_pos_emb():
       "drop_rate": 0.1,
       "n_layers": 12,
       "n_heads": 12,
-      "pos_emb_type": "sinusoidal",
+      "pos_emb_type": "rope",
   }
 
   model = gpt2.GPTModel(config)
